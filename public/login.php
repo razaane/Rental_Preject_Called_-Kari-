@@ -25,6 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Invalid email or password!";
     }
 }
+$_SESSION['user_id'] = $user['user_id'];
+$_SESSION['username'] = $user['username'];
+$_SESSION['role'] = $user['role_name'];
+
 ?>
 <!DOCTYPE html>
 
@@ -162,35 +166,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <span class="material-symbols-outlined text-sm">arrow_forward</span>
                 </button>
             </form>
-            <!-- Divider -->
-            <div class="relative my-8">
-                <div class="absolute inset-0 flex items-center">
-                    <div class="w-full border-t border-white/10"></div>
-                </div>
-                <div class="relative flex justify-center text-xs uppercase">
-                    <span class="bg-background-dark px-3 text-gray-500">Or continue with</span>
-                </div>
-            </div>
-            <!-- Social Logins -->
-            <div class="grid grid-cols-2 gap-4">
-                <button class="flex items-center justify-center gap-2 px-4 py-3 border border-white/10 rounded-xl bg-surface-dark/50 hover:bg-surface-dark hover:border-white/20 transition-all group" type="button">
-                    <svg aria-hidden="true" class="h-5 w-5 fill-white group-hover:scale-110 transition-transform" viewbox="0 0 24 24">
-                        <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"></path>
-                    </svg>
-                    <span class="text-sm font-medium text-gray-300">Google</span>
-                </button>
-                <button class="flex items-center justify-center gap-2 px-4 py-3 border border-white/10 rounded-xl bg-surface-dark/50 hover:bg-surface-dark hover:border-white/20 transition-all group" type="button">
-                    <svg aria-hidden="true" class="h-5 w-5 fill-white group-hover:scale-110 transition-transform" fill="currentColor" viewbox="0 0 24 24">
-                        <path d="M13.0729 1.94297C13.6826 1.1666 14.1169 0.0892976 13.9984 -7.23518e-05C13.0642 0.0402206 11.9336 0.655845 11.2581 1.47285C10.6559 2.18685 10.1373 3.3241 10.2673 4.38243C11.3148 4.4673 12.4326 3.85626 13.0729 1.94297ZM6.96328 10.9419C6.96328 14.1565 9.77359 15.6833 9.81438 15.7022C9.79094 15.7828 9.35266 17.3175 8.28688 18.8856C7.36984 20.2319 6.42391 21.5702 4.90969 21.6031C3.38312 21.6366 2.91031 20.6975 1.18563 20.6975C-0.539062 20.6975 -0.963281 21.5878 0.514375 21.6366C-2.02234 21.7188 -3.07344 20.3644 -4.1375 18.8359C-5.22859 17.2662 -6.07125 14.5028 -6.07125 11.6669C-6.07125 9.31343 -4.15047 7.78718 -2.00766 7.75437C-0.542813 7.72124 0.540156 8.74249 1.45547 8.74249C2.35516 8.74249 3.73828 7.5403 5.48016 7.70421C6.21625 7.73468 8.0175 8.00343 9.29344 9.87562C9.18563 9.94499 6.96328 11.2337 6.96328 10.9419Z"></path>
-                    </svg>
-                    <span class="text-sm font-medium text-gray-300">Apple</span>
-                </button>
-            </div>
+        
             <!-- Footer -->
             <div class="mt-auto pt-8 text-center">
                 <p class="text-gray-400 text-sm">
                     Don't have an account?
-                    <a class="text-primary-light font-bold hover:text-white transition-colors ml-1" href="#">Sign Up</a>
+                    <a class="text-primary-light font-bold hover:text-white transition-colors ml-1" href='../public/register.php'>Sign Up</a>
                 </p>
             </div>
         </div>

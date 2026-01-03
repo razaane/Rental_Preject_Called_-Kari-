@@ -1,4 +1,7 @@
 <?php
+
+use PgSql\Result;
+
 require_once __DIR__ . "/UserInterface.php";
 require_once __DIR__ . '/database.php';
 
@@ -66,5 +69,41 @@ class User implements UserInterface
         $stmt->execute([':email' => $email]);
 
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+    public function updateProfile(int $id, array $data): bool
+    {
+        $fields = [];
+        $params = [':id' => $id];
+
+        if (!empty($data['username'])) {
+            $fields[] = "username = :username";
+            $params[':username'] = htmlspecialchars($data['username']);
+        }
+        if (!empty($data['email'])) {
+            $fields[] = "email = :email";
+            $params[':email'] = htmlspecialchars($data['email']);
+        }
+        if (!empty($data['password'])) {
+            $fields[] = "password = :password";
+            $params[':password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+        }
+
+        if (empty($fields)) return false;
+
+        $sql = "UPDATE users SET " . implode(', ', $fields) . " WHERE user_id = :id";
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute($params);
+    }
+
+    public function getRole(int $id): ?string
+    {
+        $sql = "SELECT r.role_name 
+        FROM users u 
+        JOIN roles r ON u.role_id = r.role_id
+        WHERE u.user_id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ? $result['rola_name '] : null;
     }
 }
