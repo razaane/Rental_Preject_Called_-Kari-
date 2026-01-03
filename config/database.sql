@@ -18,4 +18,4 @@ CREATE TABLE users (
     role_id INT NOT NULL,
     FOREIGN KEY (role_id) REFERENCES roles(role_id)
 );
-
+SELECT * FROM users;

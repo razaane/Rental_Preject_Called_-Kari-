@@ -10,9 +10,9 @@ interface UserInterface {
     public function findByEmail(string $email):?array;
 
     //pour un mise à jour de votre profile
-    public function updateProfile(int $id , array $data) :bool;
+    // public function updateProfile(int $id , array $data) :bool;
 
-    //pour les roles 
-    public function getRole():string;
+    // //pour les roles 
+    // public function getRole():string;
 
 }

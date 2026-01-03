@@ -1,37 +1,70 @@
 <?php
-session_start();
-require_once "database.php";
-require_once "UserInterface.php";
+require_once __DIR__ . "/UserInterface.php";
+require_once __DIR__ . '/database.php';
 
-class User implements UserInterface{
+class User implements UserInterface
+{
     private PDO $conn;
-    private int $id;
     private string $username;
     private string $email;
-    private string $hach_pass;
-    private string $role;
-    
-    //for automatic connexion 
-    public function __construct(PDO $pdo) {
+    private string $password;
+    private int $role;
+
+    public function __construct(PDO $pdo)
+    {
         $this->conn = $pdo;
     }
 
-    //for register 
-    public function register(array $data): bool {
-        //cheks if email already exists ou non 
-        if($this->findByEmail($data['email'])){
+    public function register(array $data): bool
+    {
+        if (empty($data['role'])) {
             return false;
         }
-        //recuperer les données 
-        $this->username =htmlspecialchars($data['username']);
-        $this->email = htmlspecialchars($data['email']);
-        $this->role = htmlspecialchars($data['role']);
-        //pouir hacher le pass 
-        $this->hach_pass = password_hash($data['password'],PASSWORD_DEFAULT);
-        
+        if ($this->findByEmail($data['email'])) {
+            return false;
+        }
+
+        $this->username = trim($data['username']);
+        $this->email = trim($data['email']);
+        $this->password = password_hash($data['password'], PASSWORD_DEFAULT);
+        $this->role = (int) $data['role'];
+
+        $sql = "INSERT INTO users (username, email, password, role_id)
+                VALUES (:username, :email, :password, :role_id)";
+        $stmt = $this->conn->prepare($sql);
+
+        return $stmt->execute([
+            'username' => $this->username,
+            'email' => $this->email,
+            'password' => $this->password,
+            'role_id' => $this->role
+        ]);
     }
 
+    public function login(string $email, string $password): bool
+    {
+        $user = $this->findByEmail($email);
 
+        if ($user && password_verify($password, $user['password'])) {
+            $_SESSION['user_id'] = $user['user_id'];
+            $_SESSION['role'] = $user['role_name'];
+            $_SESSION['username'] = $user['username'];
+            return true;
+        }
+        return false;
+    }
+
+    public function findByEmail(string $email): ?array
+    {
+        $sql = "SELECT u.user_id, u.username, u.email, u.password, r.role_name
+                FROM users u
+                JOIN roles r ON u.role_id = r.role_id
+                WHERE u.email = :email
+                LIMIT 1";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([':email' => $email]);
+
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
 }
-    
-
