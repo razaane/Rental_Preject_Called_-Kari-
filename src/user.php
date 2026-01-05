@@ -95,8 +95,7 @@ class User implements UserInterface
         return $stmt->execute($params);
     }
 
-    public function getRole(int $id): ?string
-    {
+    public function getRole(int $id): string{
         $sql = "SELECT r.role_name 
         FROM users u 
         JOIN roles r ON u.role_id = r.role_id

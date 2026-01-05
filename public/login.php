@@ -1,35 +1,37 @@
 <?php
 session_start();
 require_once '../src/user.php';
-require_once '../src/database.php';
 
+$error = '';
 $db = new Database();
 $pdo = $db->getConnection();
 $user = new User($pdo);
 
-$error = '';
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = $_POST['email'] ?? '';
-    $password = $_POST['password'] ?? '';
+    $email = $_POST['email'];
+    $password = $_POST['password'];
 
-    if ($user->login($email, $password)) {
-        // Redirect to dashboard based on role
-        if ($_SESSION['role'] === 'host') {
-            header("Location: host_dashboard.php");
+    $currentUser = $user->login($email, $password);
+
+    if ($currentUser) {
+        // ✅ Set session variables here
+        $_SESSION['user_id'] = $currentUser['user_id'];
+        $_SESSION['username'] = $currentUser['username'];
+        $_SESSION['role'] = $currentUser['role_id']; // or role_name if you prefer
+
+        // Redirect based on role if needed
+        if ($currentUser['role_name'] === 'host') {
+            header("Location: host/dashboard.php");
         } else {
-            header("Location: traveler_dashboard.php");
+            header("Location: profile.php");
         }
         exit;
     } else {
         $error = "Invalid email or password!";
     }
 }
-$_SESSION['user_id'] = $user['user_id'];
-$_SESSION['username'] = $user['username'];
-$_SESSION['role'] = $user['role_name'];
-
 ?>
+
 <!DOCTYPE html>
 
 <html class="dark" lang="en">

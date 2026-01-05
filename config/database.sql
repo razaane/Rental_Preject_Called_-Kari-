@@ -19,3 +19,21 @@ CREATE TABLE users (
     FOREIGN KEY (role_id) REFERENCES roles(role_id)
 );
 SELECT * FROM users;
+
+CREATE TABLE rental (
+    rental_id int PRIMARY KEY AUTO_INCREMENT,
+    host_id INT NOT NULL,
+    title VARCHAR(250) NOT NULL ,
+    descreption VARCHAR(250) NOT NULL,
+    adress VARCHAR(250) NOT NULL,
+    city VARCHAR(50) NOT NULL,
+    price_per_night DECIMAL(10,2) NOT NULL , 
+    capacity INT NOT NULL , 
+    image_url VARCHAR(255) ,
+    available_dates TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (host_id) REFERENCES users(user_id)
+)
+
+drop table rental;
