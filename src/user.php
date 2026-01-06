@@ -44,17 +44,18 @@ class User implements UserInterface
         ]);
     }
 
-    public function login(string $email, string $password): bool
+    public function login(string $email, string $password)
     {
         $user = $this->findByEmail($email);
 
-        if ($user && password_verify($password, $user['password'])) {
-            $_SESSION['user_id'] = $user['user_id'];
-            $_SESSION['role'] = $user['role_name'];
-            $_SESSION['username'] = $user['username'];
-            return true;
+        if (!$user && !password_verify($password, $user['password'])) {
+            return false;
         }
-        return false;
+            return [
+                'user_id' => $user['id'],
+                'username' => $user['username'],
+                'role_id' => $user['role_id']
+            ];
     }
 
     public function findByEmail(string $email): ?array
@@ -95,7 +96,8 @@ class User implements UserInterface
         return $stmt->execute($params);
     }
 
-    public function getRole(int $id): string{
+    public function getRole(int $id): string
+    {
         $sql = "SELECT r.role_name 
         FROM users u 
         JOIN roles r ON u.role_id = r.role_id

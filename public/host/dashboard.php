@@ -1,3 +1,12 @@
+<?php
+require_once __DIR__ . '/../../src/rental.php';
+$db = new Database;
+$conn = $db->getConnection();
+$rental = new Rental($conn);
+$rentals = $rental->findAllByHost();
+
+?>
+
 <!DOCTYPE html>
 <html class="light" lang="en">
 
@@ -90,6 +99,7 @@
                 opacity: 0;
                 transform: translateY(20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -133,7 +143,7 @@
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
                 <div class="mb-6">
                     <p class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 px-3">Main Menu</p>
-                    
+
                     <button class="nav-item active w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-purple-50/70 dark:hover:bg-white/5 transition-all font-semibold text-slate-900 dark:text-white group">
                         <div class="p-2 bg-primary/10 dark:bg-primary/20 rounded-lg group-hover:bg-primary/20 dark:group-hover:bg-primary/30 transition-colors">
                             <span class="material-symbols-outlined text-primary text-xl">dashboard</span>
@@ -166,14 +176,14 @@
 
                 <div>
                     <p class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 px-3">Actions</p>
-                    
-                    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark hover:shadow-glow transition-all font-bold text-white group">
+
+                    <button onclick="window.location.href='../host/add_rental.php'"
+                        class="w-full flex items-center gap-3 px-3 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark hover:shadow-glow transition-all font-bold text-white group">
                         <div class="p-2 bg-white/20 rounded-lg">
                             <span class="material-symbols-outlined text-white text-xl">add_circle</span>
                         </div>
                         <span>Add New Rental</span>
                     </button>
-
                     <button class="nav-item w-full flex items-center gap-3 px-3 py-3 mt-2 rounded-xl hover:bg-purple-50/70 dark:hover:bg-white/5 transition-all font-semibold text-slate-600 dark:text-slate-300 group">
                         <div class="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg group-hover:bg-primary/10 dark:group-hover:bg-primary/20 transition-colors">
                             <span class="material-symbols-outlined text-slate-600 dark:text-slate-400 group-hover:text-primary text-xl">analytics</span>
@@ -350,7 +360,7 @@
                         <h3 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">My Properties</h3>
                         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage and track your rental listings</p>
                     </div>
-                    <button class="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/25">
+                    <button onclick="window.location.href='../host/add_rental.php'" class="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/25">
                         <span class="material-symbols-outlined text-xl">add</span>
                         Add Property
                     </button>
@@ -358,45 +368,65 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
                     <!-- Active Rental Card -->
-                    <div class="group card-hover bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 transition-all">
-                        <div class="relative h-48 overflow-hidden">
-                            <div class="absolute top-3 right-3 z-10 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-lg">
-                                <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                                Active
-                            </div>
-                            <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBV84AHgJm2BQbQTVApOifbRf47X4NeZtTF1xl5upBh6ot8-p461DYwu-tcnlvmkBdw6zrJNPkG31BVQec-6IjUvPv13gYBSYs5FKYTVOwgoLTpuPeuBVibxDrRv_bmVB1q7WHc74mESE_7mIHGKvefokQnR40SvpsSsdsRID9-GHkQ0pnaeeiViY2aQJ20KgEF1Vt-2rvD8QYBPgOuaoaUpTYUzdFAABNFByiGnR_u1_7hLp4t2cwlUrRIKl_2D9LwZxnmeiySHag" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                        </div>
-                        <div class="p-5">
-                            <h4 class="font-bold text-lg text-slate-900 dark:text-white mb-2">Modern Downtown Loft</h4>
-                            <div class="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 mb-4">
-                                <span class="flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-base">bed</span> 2 Beds
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-base">bathtub</span> 2 Baths
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-base">wifi</span> WiFi
-                                </span>
-                            </div>
-                            <div class="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-white/10">
-                                <div>
-                                    <span class="text-2xl font-bold text-primary">$120</span>
-                                    <span class="text-sm text-slate-400">/night</span>
+                <?php if (!empty($rentals)) : ?>
+                    <?php foreach ($rentals as $itm) : ?>
+                        <div class="group card-hover bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 transition-all">
+                            <div class="relative h-48 overflow-hidden">
+                                <div class="absolute top-3 right-3 z-10 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-lg">
+                                    <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                                    Active
                                 </div>
-                                <div class="flex items-center gap-2">
-                                    <button class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors">
-                                        Edit
-                                    </button>
-                                    <button class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition-colors">
-                                        Delete
-                                    </button>
+                                <img src="<?php htmlspecialchars($itm['img_url']) ?>"
+                                    class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                            </div>
+                            <div class="p-5">
+                                <h4 class="font-bold text-lg text-slate-900 dark:text-white mb-2">
+                                    <?php htmlspecialchars($itm['title']) ?>
+                                </h4>
+                                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                                    📍 <?= htmlspecialchars($itm['city']) ?>
+                                </p>
+                                <!-- <div class="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 mb-4">
+                                    <span class="flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-base">bed</span> 2 Beds
+                                    </span>
+                                    <span class="flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-base">bathtub</span> 2 Baths
+                                    </span>
+                                    <span class="flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-base">wifi</span> WiFi
+                                    </span>
+                                </div> -->
+                                <div class="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-white/10">
+                                    <div>
+                                        <span class="text-2xl font-bold text-primary">
+                                            <?php htmlspecialchars($itm['price_per_night'])?>
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button href="../host/edit_rental.php?id=<?=  $itm['rental_id'] ?>" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors">
+                                            Edit
+                                        </button>
+                                        <button href="../host/delete_rental.php?id<?=  $itm['rental_id'] ?>" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition-colors">
+                                            Delete
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                    <?php endforeach ?>
+                <?php else : ?>
+                    <p class="text-slate-500 dark:text-slate-400">
+                        No properties found.
+                    </p>
+                <?php endif; ?>
 
-                    <!-- Paused Rental Card -->
-                    <div class="group card-hover bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 transition-all opacity-75 hover:opacity-100">
-                        <div class="relative h-48 overflow-hidden">
-                            <div class="absolute top-3 right-3 z-10 bg-slate-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex
+
+
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

@@ -13,19 +13,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $currentUser = $user->login($email, $password);
 
-    if ($currentUser) {
-        // ✅ Set session variables here
+    if ($currentUser !== false) {
+        //  Set session variables here
         $_SESSION['user_id'] = $currentUser['user_id'];
         $_SESSION['username'] = $currentUser['username'];
         $_SESSION['role'] = $currentUser['role_id']; // or role_name if you prefer
 
-        // Redirect based on role if needed
-        if ($currentUser['role_name'] === 'host') {
-            header("Location: host/dashboard.php");
-        } else {
-            header("Location: profile.php");
+        if($_SESSION['role'] ===2){
+            header("Location: ../public/host/dashboard.php");
+            exit;
         }
-        exit;
+        if($_SESSION['role'] === 3){
+            header("Location: ..public/traveler/dashbord.php");
+            exit;
+
+        }
     } else {
         $error = "Invalid email or password!";
     }

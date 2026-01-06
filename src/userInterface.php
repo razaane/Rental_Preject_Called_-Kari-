@@ -4,7 +4,7 @@ interface UserInterface {
     public function register(array $data): bool;
 
     //permet de connecter avec email et pass 
-    public function login(string $email, string $password):bool;
+    public function login(string $email, string $password);
 
     //check user with their emails only 
     public function findByEmail(string $email):?array;
