@@ -27,6 +27,12 @@
                 },
             },
         }
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const sidebar = document.getElementById('sidebar');
+
+        mobileMenuBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('hidden');
+        });
     </script>
     <style>
         body {
@@ -73,20 +79,23 @@
 
             <!-- Navigation -->
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
+                <!-- Most important actions first -->
                 <button onclick="showSection('browse')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-white/5 transition-all font-semibold text-slate-600 dark:text-slate-300">
                     <span class="material-symbols-outlined text-xl">search</span>
                     <span>Browse Rentals</span>
                 </button>
 
-                <button onclick="showSection('favorites')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-white/5 transition-all font-semibold text-slate-600 dark:text-slate-300">
-                    <span class="material-symbols-outlined text-xl">favorite</span>
-                    <span>My Favorites</span>
-                    <span id="favCount" class="ml-auto bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded-lg">0</span>
+                <!-- Highlighted Reservations / Bookings -->
+                <button onclick="showSection('bookings')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 dark:bg-primary/20 text-primary font-bold shadow-sm hover:bg-primary/20 dark:hover:bg-primary/30 transition-all">
+                    <span class="material-symbols-outlined text-xl fill">calendar_month</span>
+                    <span href="../traveler/add_reservation.php">Reservation Now</span>
+                    <span id="bookingCount" class="ml-auto bg-primary text-white text-xs font-bold px-2.5 py-1 rounded-full">0</span>
                 </button>
 
-                <button onclick="showSection('bookings')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-white/5 transition-all font-semibold text-slate-600 dark:text-slate-300">
-                    <span class="material-symbols-outlined text-xl">calendar_month</span>
-                    <span>My Bookings</span>
+                <button onclick="showSection('favorites')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-white/5 transition-all font-semibold text-slate-600 dark:text-slate-300">
+                    <span class="material-symbols-outlined text-xl">favorite</span>
+                    <span>Favorites</span>
+                    <span id="favCount" class="ml-auto bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded-lg">0</span>
                 </button>
 
                 <button onclick="showSection('reviews')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-white/5 transition-all font-semibold text-slate-600 dark:text-slate-300">
@@ -94,11 +103,11 @@
                     <span>My Reviews</span>
                 </button>
 
-                <div class="pt-4 border-t border-slate-200 dark:border-white/5 mt-4">
+                <div class="pt-6 mt-4 border-t border-slate-200 dark:border-white/10">
                     <button onclick="showSection('notifications')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-white/5 transition-all font-semibold text-slate-600 dark:text-slate-300">
                         <span class="material-symbols-outlined text-xl">notifications</span>
                         <span>Notifications</span>
-                        <span class="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-lg">2</span>
+                        <span class="ml-auto bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">2</span>
                     </button>
                 </div>
             </nav>
@@ -174,6 +183,7 @@
 
                     <div id="rentalsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <!-- Rentals will be rendered here -->
+
                     </div>
                 </div>
             </div>

@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'city' => $_POST['city'],
         'price_per_night' => $_POST['price_per_night'],
         'capacity' => $_POST['capacity'],
-        'img_url' => $_POST['img_url'],
+        'image_url' => $_POST['image_url'],
         'available_dates' => $_POST['available_dates'],
     ];
 
@@ -130,7 +130,7 @@ tailwind.config = {
         <!-- Image URL -->
         <div class="flex flex-col">
             <label class="text-sm font-semibold text-primary mb-1">Image URL</label>
-            <input required type="url" name="img_url" placeholder="https://..."
+            <input required type="url" name="image_url" placeholder="https://..."
                 class="w-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-3 focus:ring-2 focus:ring-primary focus:border-primary transition"/>
         </div>
 

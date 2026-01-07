@@ -368,61 +368,59 @@ $rentals = $rental->findAllByHost();
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
                     <!-- Active Rental Card -->
-                <?php if (!empty($rentals)) : ?>
-                    <?php foreach ($rentals as $itm) : ?>
-                        <div class="group card-hover bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 transition-all">
-                            <div class="relative h-48 overflow-hidden">
-                                <div class="absolute top-3 right-3 z-10 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-lg">
-                                    <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                                    Active
-                                </div>
-                                <img src="<?php htmlspecialchars($itm['img_url']) ?>"
-                                    class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                            </div>
-                            <div class="p-5">
-                                <h4 class="font-bold text-lg text-slate-900 dark:text-white mb-2">
-                                    <?php htmlspecialchars($itm['title']) ?>
-                                </h4>
-                                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                                    📍 <?= htmlspecialchars($itm['city']) ?>
-                                </p>
-                                <!-- <div class="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 mb-4">
-                                    <span class="flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-base">bed</span> 2 Beds
-                                    </span>
-                                    <span class="flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-base">bathtub</span> 2 Baths
-                                    </span>
-                                    <span class="flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-base">wifi</span> WiFi
-                                    </span>
-                                </div> -->
-                                <div class="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-white/10">
-                                    <div>
-                                        <span class="text-2xl font-bold text-primary">
-                                            <?php htmlspecialchars($itm['price_per_night'])?>
-                                        </span>
+                    <?php if (!empty($rentals)) : ?>
+                        <?php foreach ($rentals as $itm) : ?>
+                            <div class="group card-hover bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 transition-all">
+                                <div class="relative h-48 overflow-hidden">
+                                    <div class="absolute top-3 right-3 z-10 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-lg">
+                                        <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                                        Active
                                     </div>
-                                    <div class="flex items-center gap-2">
-                                        <button href="../host/edit_rental.php?id=<?=  $itm['rental_id'] ?>" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors">
-                                            Edit
-                                        </button>
-                                        <button href="../host/delete_rental.php?id<?=  $itm['rental_id'] ?>" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition-colors">
-                                            Delete
-                                        </button>
+                                    <?php if (!empty($itm['image_url'])): ?>
+                                        <img
+                                            src="<?= htmlspecialchars($itm['image_url']) ?>"
+                                            alt="Rental image"
+                                            class="w-full h-full object-cover">
+                                    <?php else: ?>
+                                        <img
+                                            src="/assets/no-image.png"
+                                            alt="No image"
+                                            class="w-full h-full object-cover">
+                                    <?php endif; ?>
+                                </div>
+                                <div class="p-5">
+                                    <h4 class="font-bold text-lg text-slate-900 dark:text-white mb-2">
+                                        <?php htmlspecialchars($itm['title']) ?>
+                                    </h4>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                                        📍 <?= htmlspecialchars($itm['city']) ?>
+                                    </p>
+                                    <div class="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-white/10">
+                                        <div>
+                                            <span class="text-2xl font-bold text-primary">
+                                                <?php htmlspecialchars($itm['price_per_night']) ?>
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <a href="../host/edit_rental.php?id=<?= $itm['rental_id'] ?>" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors">
+                                                Edit
+                                            </a>
+                                            <a href="../host/delete_rental.php?=id<?=  $itm['rental_id'] ?>" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition-colors">
+                                                Delete
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
+                            <?php endforeach ?>
+                        <?php else : ?>
+                            <p class="text-slate-500 dark:text-slate-400">
+                                No properties found.
+                            </p>
+                        <?php endif; ?>
+
+
+
                             </div>
-                    <?php endforeach ?>
-                <?php else : ?>
-                    <p class="text-slate-500 dark:text-slate-400">
-                        No properties found.
-                    </p>
-                <?php endif; ?>
-
-
-
-                    </div>
                 </div>
             </div>
         </main>

@@ -48,23 +48,22 @@ class User implements UserInterface
     {
         $user = $this->findByEmail($email);
 
-        if (!$user && !password_verify($password, $user['password'])) {
+        if (!$user || !password_verify($password, $user['password'])) {
             return false;
         }
-            return [
-                'user_id' => $user['id'],
-                'username' => $user['username'],
-                'role_id' => $user['role_id']
-            ];
+        return [
+            'user_id' => $user['user_id'],
+            'username' => $user['username'],
+            'role_id' => $user['role_id']
+        ];
     }
 
     public function findByEmail(string $email): ?array
     {
-        $sql = "SELECT u.user_id, u.username, u.email, u.password, r.role_name
-                FROM users u
-                JOIN roles r ON u.role_id = r.role_id
-                WHERE u.email = :email
-                LIMIT 1";
+        $sql = "SELECT u.user_id, u.username, u.email, u.password, u.role_id
+            FROM users u
+            WHERE u.email = :email
+            LIMIT 1";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([':email' => $email]);

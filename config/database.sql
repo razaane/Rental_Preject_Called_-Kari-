@@ -36,4 +36,15 @@ CREATE TABLE rental (
     FOREIGN KEY (host_id) REFERENCES users(user_id)
 )
 
-drop table rental;
+CREATE TABLE bookings (
+    booking_id INT AUTO_INCREMENT PRIMARY KEY,
+    rental_id INT NOT NULL,
+    user_id INT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    total_price DECIMAL(10,2) NOT NULL,
+    status ENUM('confirmed','cancelled') DEFAULT 'confirmed',
+
+    FOREIGN KEY (rental_id) REFERENCES rental(rental_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);

@@ -17,14 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         //  Set session variables here
         $_SESSION['user_id'] = $currentUser['user_id'];
         $_SESSION['username'] = $currentUser['username'];
-        $_SESSION['role'] = $currentUser['role_id']; // or role_name if you prefer
+        $_SESSION['role'] = $currentUser['role_id']; 
 
         if($_SESSION['role'] ===2){
             header("Location: ../public/host/dashboard.php");
             exit;
         }
-        if($_SESSION['role'] === 3){
-            header("Location: ..public/traveler/dashbord.php");
+        if($_SESSION['role'] ===3){
+            header("Location: ../public/traveler/dashboard.php");
             exit;
 
         }
