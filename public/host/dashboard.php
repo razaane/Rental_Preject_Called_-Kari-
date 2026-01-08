@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../../src/rental.php';
+
 $db = new Database;
 $conn = $db->getConnection();
 $rental = new Rental($conn);

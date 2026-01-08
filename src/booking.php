@@ -1,7 +1,7 @@
 <?php
-session_start();
 
 require_once __DIR__ . '/../src/database.php';
+
 class Booking
 {
     private int $booking_id;
@@ -26,54 +26,53 @@ class Booking
         $this->role_id = (int) $_SESSION['role'];
     }
 
+    /**
+     * Create a new booking
+     */
     public function create(array $data): bool
     {
         $this->rental_id  = (int) $data['rental_id'];
         $this->start_date = $data['start_date'];
         $this->end_date   = $data['end_date'];
 
-        $this->checkAvailability(
-            $this->rental_id,
-            $this->start_date,
-            $this->end_date
-        );
+        // Check availability
+        $this->checkAvailability($this->rental_id, $this->start_date, $this->end_date);
 
+        // Calculate nights
         $nights = (strtotime($this->end_date) - strtotime($this->start_date)) / 86400;
         if ($nights <= 0) {
             throw new Exception("Invalid booking dates");
         }
 
-        $this->total_price = $nights * (float) $data['price_per_night'];
+        // Fetch rental price from DB
+        $price_per_night = $this->getRentalPrice($this->rental_id);
+
+        // Calculate total price
+        $this->total_price = $nights * $price_per_night;
         $this->status = 'confirmed';
 
-
+        // Insert into database
         $sql = "INSERT INTO bookings 
                 (rental_id, user_id, start_date, end_date, total_price, status)
                 VALUES (?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->conn->prepare($sql);
-        $price_per_night= $this->getRentalPrice($this->rental_id);
 
         return $stmt->execute([
             $this->rental_id,
             $this->user_id,
             $this->start_date,
             $this->end_date,
-            $this->total_price = $this->calculateTotalPrice(
-                $this->start_date,
-                $this->end_date,
-                $price_per_night
-            ),
+            $this->total_price,
             $this->status
         ]);
     }
 
-
-    public function checkAvailability(
-        int $rentalId,
-        string $startDate,
-        string $endDate
-    ): bool {
+    /**
+     * Check if rental is available
+     */
+    public function checkAvailability(int $rentalId, string $startDate, string $endDate): bool
+    {
         $sql = "
             SELECT COUNT(*) 
             FROM bookings
@@ -95,25 +94,30 @@ class Booking
         return true;
     }
 
+    /**
+     * Cancel booking
+     */
     public function cancel(int $booking_id): bool
     {
-        if ($this->role_id === 3) {
+        if ($this->role_id === 3) { // Admin can cancel any booking
             $sql = "UPDATE bookings 
                     SET status='cancelled'
                     WHERE booking_id=?";
-
             $stmt = $this->conn->prepare($sql);
             return $stmt->execute([$booking_id]);
         }
 
+        // User can cancel only their own bookings
         $sql = "UPDATE bookings 
                 SET status='cancelled'
                 WHERE booking_id=? AND user_id=?";
-
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([$booking_id, $this->user_id]);
     }
 
+    /**
+     * Get bookings for current user
+     */
     public function findUserBookings(): array
     {
         $sql = "SELECT * 
@@ -127,15 +131,20 @@ class Booking
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /**
+     * Get bookings for a specific rental
+     */
     public function findRentalBookings(int $rental_id): array
     {
         $sql = "SELECT * FROM bookings WHERE rental_id=?";
-
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([$rental_id]);
-
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    /**
+     * Calculate total price based on nights and price per night
+     */
     public function calculateTotalPrice(string $start_date, string $end_date, float $price_per_night): float
     {
         $nights = (strtotime($end_date) - strtotime($start_date)) / 86400;
@@ -146,9 +155,13 @@ class Booking
 
         return $nights * $price_per_night;
     }
+
+    /**
+     * Get rental price per night from DB
+     */
     public function getRentalPrice(int $rental_id): float
     {
-        $sql = "SELECT price_per_night FROM rental WHERE rental_id = ?";
+        $sql = "SELECT price_per_night FROM rental WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([$rental_id]);
 

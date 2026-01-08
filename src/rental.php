@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/database.php';
+session_start();
 class Rental
 {
     private int $rental_id;
@@ -21,23 +22,24 @@ class Rental
 
     public function create(array $data)
     {
-        if (!isset($_SESSION['user_id']) || $_SESSION['role'] == 2) {
+        if (!isset($_SESSION['user_id']) || ($_SESSION['role'] == 2)) {
+            $this->host_id = (int) $_SESSION['user_id'];
+            $sql = "INSERT INTO rental(host_id,title,descreption,adress,city,price_per_night,capacity,image_url,available_dates) VALUES(?,?,?,?,?,?,?,?,?)";
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([
+                $this->host_id,
+                $data['title'],
+                $data['descreption'],
+                $data['adress'],
+                $data['city'],
+                $data['price_per_night'],
+                $data['capacity'],
+                $data['image_url'],
+                $data['available_dates']
+            ]);
+        } else {
             throw new Exception("Unauthorized: Host not logged in");
         }
-        $this->host_id = (int) $_SESSION['user_id'];
-        $sql = "INSERT INTO rental(host_id,title,descreption,adress,city,price_per_night,capacity,image_url,available_dates) VALUES(?,?,?,?,?,?,?,?,?)";
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([
-            $this->host_id,
-            $data['title'],
-            $data['descreption'],
-            $data['adress'],
-            $data['city'],
-            $data['price_per_night'],
-            $data['capacity'],
-            $data['image_url'],
-            $data['available_dates']
-        ]);
     }
 
     public function update(int $rental_id, array $data)
@@ -78,16 +80,6 @@ class Rental
         ]);
     }
 
-    // public function findById(int $rental_id)
-    // {
-    //     $sql = "SELECT * FROM rental WHERE rental_id=? AND host_id=?";
-    //     $stmt = $this->conn->prepare($sql);
-    //     $stmt->execute([
-    //         $rental_id,
-    //         $this->host_id,
-    //     ]);;
-    //     return  $stmt->fetch(PDO::FETCH_ASSOC);
-    // }
     public function findById(int $rental_id, bool $onlyHost = false)
     {
         if ($onlyHost) {
@@ -115,9 +107,7 @@ class Rental
         ORDER BY rental_id DESC";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute([
-            $this->host_id
-        ]);
+        $stmt->execute([$host_id]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -185,15 +175,15 @@ class Rental
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row['total'] ?? 0;
     }
-public function findAllPublic()
-{
-    $sql = "SELECT rental_id, title, city, price_per_night, image_url
+    public function findAllPublic()
+    {
+        $sql = "SELECT rental_id, title, city, price_per_night, image_url
             FROM rental
             ORDER BY rental_id DESC";
 
-     $stmt = $this->conn->prepare($sql);
-    $stmt->execute();
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
 
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);}
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
-

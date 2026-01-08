@@ -1,23 +1,57 @@
 <?php
-require_once __DIR__ . "/../../src/rental.php";
+require_once __DIR__ . '/../../src/booking.php';
+require_once __DIR__ . '/../../src/rental.php';
+require_once __DIR__ . '/../../src/user.php';
 
-$db = new Database;
+
+$db = new Database();
 $conn = $db->getConnection();
-
 $ren = new Rental($conn);
-$rentals = $ren->findAllPublic();
+$userObj = new User($conn);
 
+// Get user profile
+$userProfile = $userObj->findByEmail($_SESSION['email'] ?? '');
 
+// Pagination
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$perPage = 9;
+$offset = ($page - 1) * $perPage;
 
+// Search criteria
+$criteria = [];
+if (!empty($_GET['city'])) $criteria['city'] = $_GET['city'];
+if (!empty($_GET['min_price'])) $criteria['min_price'] = $_GET['min_price'];
+if (!empty($_GET['max_price'])) $criteria['max_price'] = $_GET['max_price'];
+
+// Get rentals with pagination
+if (!empty($criteria)) {
+    $rentals = $ren->search($criteria, $perPage, $offset);
+    $totalRentals = $ren->countSearchResults($criteria);
+} else {
+    // For all rentals, we need to modify findAllPublic to support pagination
+    $rentals = $ren->findAllPublic();
+    $totalRentals = count($rentals);
+    $rentals = array_slice($rentals, $offset, $perPage);
+}
+
+$totalPages = ceil($totalRentals / $perPage);
+
+// Get user's bookings count
+try {
+    $booking = new Booking($conn);
+    $userBookings = $booking->findUserBookings();
+    $bookingsCount = count($userBookings);
+} catch (Exception $e) {
+    $bookingsCount = 0;
+    $userBookings = [];
+}
 ?>
-
 <!DOCTYPE html>
 <html class="light" lang="en">
-
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Purple Host - Rental Platform</title>
+    <title>Purple Host - Traveler Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -40,42 +74,21 @@ $rentals = $ren->findAllPublic();
                 },
             },
         }
-        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-        const sidebar = document.getElementById('sidebar');
-
-        mobileMenuBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('hidden');
-        });
     </script>
     <style>
-        body {
-            min-height: 100vh;
-        }
-
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        .card-hover {
-            transition: all 0.3s ease;
-        }
-
-        .card-hover:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 40px -8px rgba(146, 19, 236, 0.25);
-        }
+        body { min-height: 100vh; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 40px -8px rgba(146, 19, 236, 0.25); }
+        .section { display: none; }
+        .section.active { display: block; }
+        .nav-btn.active { background: linear-gradient(135deg, #9213ec 0%, #7a0ec4 100%); color: white; }
     </style>
 </head>
-
 <body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display">
-
     <div class="flex min-h-screen">
-        <!-- Sidebar - Desktop -->
+        <!-- Sidebar -->
         <aside id="sidebar" class="hidden md:flex w-72 bg-surface-light dark:bg-surface-dark border-r border-slate-200 dark:border-white/5 flex-col fixed h-screen shadow-xl z-50">
             <!-- Logo -->
             <div class="p-6 border-b border-slate-200 dark:border-white/5">
@@ -85,24 +98,22 @@ $rentals = $ren->findAllPublic();
                     </div>
                     <div>
                         <h2 class="font-bold text-lg text-slate-900 dark:text-white">Purple Host</h2>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">Rental Platform</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Traveler Dashboard</p>
                     </div>
                 </div>
             </div>
 
             <!-- Navigation -->
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
-                <!-- Most important actions first -->
-                <button onclick="showSection('browse')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-white/5 transition-all font-semibold text-slate-600 dark:text-slate-300">
-                    <span class="material-symbols-outlined text-xl">search</span>
-                    <span>Browse Rentals</span>
+                <button onclick="showSection('browse')" class="nav-btn active w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-semibold">
+                    <span class="material-symbols-outlined text-xl">dashboard</span>
+                    <span>Dashboard</span>
                 </button>
-
-                <!-- Highlighted Reservations / Bookings -->
-                <a href="/public/traveler/add_reservation.php" onclick="showSection('bookings')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 dark:bg-primary/20 text-primary font-bold shadow-sm hover:bg-primary/20 dark:hover:bg-primary/30 transition-all">
-                    <span class="material-symbols-outlined text-xl fill">calendar_month</span>
-                    <span>Reservation Now</span>
-                    <span id="bookingCount" class="ml-auto bg-primary text-white text-xs font-bold px-2.5 py-1 rounded-full">0</span>
+                
+                <a href="bookings.php" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-white/5 transition-all font-semibold text-slate-600 dark:text-slate-300">
+                    <span class="material-symbols-outlined text-xl">calendar_month</span>
+                    <span>My Bookings</span>
+                    <span class="ml-auto bg-primary text-white text-xs font-bold px-2.5 py-1 rounded-full"><?= $bookingsCount ?></span>
                 </a>
 
                 <button onclick="showSection('favorites')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-white/5 transition-all font-semibold text-slate-600 dark:text-slate-300">
@@ -111,33 +122,29 @@ $rentals = $ren->findAllPublic();
                     <span id="favCount" class="ml-auto bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded-lg">0</span>
                 </button>
 
-                <button onclick="showSection('reviews')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-white/5 transition-all font-semibold text-slate-600 dark:text-slate-300">
-                    <span class="material-symbols-outlined text-xl">rate_review</span>
-                    <span>My Reviews</span>
-                </button>
-
                 <div class="pt-6 mt-4 border-t border-slate-200 dark:border-white/10">
-                    <button onclick="showSection('notifications')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-white/5 transition-all font-semibold text-slate-600 dark:text-slate-300">
-                        <span class="material-symbols-outlined text-xl">notifications</span>
-                        <span>Notifications</span>
-                        <span class="ml-auto bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">2</span>
-                    </button>
+                    <a href="/public/auth/logout.php" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-all font-semibold text-slate-600 dark:text-slate-300 hover:text-red-600">
+                        <span class="material-symbols-outlined text-xl">logout</span>
+                        <span>Logout</span>
+                    </a>
                 </div>
             </nav>
 
             <!-- Profile -->
             <div class="p-4 border-t border-slate-200 dark:border-white/5">
                 <div class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center text-white font-bold">AW</div>
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center text-white font-bold">
+                        <?= strtoupper(substr($userProfile['username'] ?? 'U', 0, 2)) ?>
+                    </div>
                     <div class="flex-1">
-                        <p class="font-bold text-sm">Alex Wilson</p>
-                        <p class="text-xs text-slate-500">Guest Account</p>
+                        <p class="font-bold text-sm"><?= htmlspecialchars($userProfile['username'] ?? 'User') ?></p>
+                        <p class="text-xs text-slate-500">Traveler</p>
                     </div>
                 </div>
             </div>
         </aside>
 
-        <!-- Mobile Sidebar Toggle -->
+        <!-- Mobile Menu Button -->
         <button id="mobileMenuBtn" class="md:hidden fixed top-4 left-4 z-50 p-2 bg-primary text-white rounded-xl shadow-lg">
             <span class="material-symbols-outlined">menu</span>
         </button>
@@ -145,392 +152,260 @@ $rentals = $ren->findAllPublic();
         <!-- Main Content -->
         <main class="flex-1 md:ml-72">
             <!-- Browse Rentals Section -->
-            <div id="browseSection" class="section">
+            <div id="browseSection" class="section active">
                 <!-- Search Header -->
-                <div class="bg-gradient-to-r from-primary to-pink-500 text-white p-4 border rounded-b-xl">
+                <div class="bg-gradient-to-r from-primary to-pink-500 text-white p-8 rounded-b-3xl shadow-xl">
                     <div class="max-w-6xl mx-auto">
                         <h1 class="text-3xl font-bold mb-4">Find Your Perfect Stay</h1>
-
+                        
                         <!-- Search Form -->
-                        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-                            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <form method="GET" class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div>
                                     <label class="block text-sm font-semibold mb-2">City</label>
-                                    <input type="text" id="searchCity" placeholder="Enter city" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/50">
+                                    <input type="text" name="city" value="<?= htmlspecialchars($_GET['city'] ?? '') ?>" placeholder="Enter city" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/50">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold mb-2">Min Price</label>
-                                    <input type="number" id="searchMinPrice" placeholder="$0" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/50">
+                                    <label class="block text-sm font-semibold mb-2">Min Price (€)</label>
+                                    <input type="number" name="min_price" value="<?= htmlspecialchars($_GET['min_price'] ?? '') ?>" placeholder="0" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/50">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold mb-2">Max Price</label>
-                                    <input type="number" id="searchMaxPrice" placeholder="$500" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/50">
+                                    <label class="block text-sm font-semibold mb-2">Max Price (€)</label>
+                                    <input type="number" name="max_price" value="<?= htmlspecialchars($_GET['max_price'] ?? '') ?>" placeholder="500" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/50">
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-semibold mb-2">Guests</label>
-                                    <input type="number" id="searchGuests" placeholder="2" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/50">
+                                <div class="flex items-end">
+                                    <button type="submit" class="w-full px-6 py-3 bg-white text-primary font-bold rounded-xl hover:bg-slate-100 transition-colors shadow-lg">
+                                        <span class="material-symbols-outlined inline-block mr-2 align-middle">search</span>
+                                        Search
+                                    </button>
                                 </div>
-                                <button onclick="searchRentals()" class="mt-4 w-full md:w-auto px-4 py-3 bg-white text-primary font-bold rounded-xl hover:bg-slate-100 transition-colors">
-                                    Search Rentals
-                                </button>
                             </div>
-
-                        </div>
+                            <?php if (!empty($criteria)): ?>
+                                <div class="mt-4">
+                                    <a href="?" class="text-sm text-white/80 hover:text-white underline">Clear filters</a>
+                                </div>
+                            <?php endif; ?>
+                        </form>
                     </div>
                 </div>
 
                 <!-- Rentals Grid -->
                 <div class="p-6 max-w-6xl mx-auto">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-bold">Available Rentals</h2>
-                        <div class="flex items-center gap-2">
-                            <button onclick="prevPage()" class="px-4 py-2 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-white/10 rounded-lg hover:bg-purple-50 dark:hover:bg-white/5">
-                                <span class="material-symbols-outlined">chevron_left</span>
-                            </button>
-                            <span class="px-4 py-2 font-semibold">Page <span id="currentPage">1</span></span>
-                            <button onclick="nextPage()" class="px-4 py-2 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-white/10 rounded-lg hover:bg-purple-50 dark:hover:bg-white/5">
-                                <span class="material-symbols-outlined">chevron_right</span>
-                            </button>
-                        </div>
+                        <h2 class="text-2xl font-bold">Available Rentals (<?= $totalRentals ?> found)</h2>
                     </div>
 
-                    <div id="rentalsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <!-- Rentals will be rendered here -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <?php if (empty($rentals)): ?>
-                            <div class="col-span-full text-center py-16 text-slate-500 dark:text-slate-400">
-                                <p class="text-xl">Aucune location disponible pour le moment...</p>
+                            <div class="col-span-full text-center py-16">
+                                <span class="material-symbols-outlined text-6xl text-slate-300 mb-4">home_work</span>
+                                <p class="text-xl text-slate-500 dark:text-slate-400">No rentals found</p>
+                                <a href="?" class="mt-4 inline-block px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary-dark transition">
+                                    Browse All Rentals
+                                </a>
                             </div>
                         <?php else: ?>
                             <?php foreach ($rentals as $rent): ?>
                                 <?php
                                 $rentalId = (int)$rent['rental_id'];
                                 $price = number_format($rent['price_per_night'], 0, ',', ' ');
-                                $title = htmlspecialchars($rent['titre'] ?? $rent['title'] ?? 'Sans titre');
-                                $desc = htmlspecialchars(substr($rent['descreption'] ?? $rent['description'] ?? '', 0, 85)) . '...';
-                                $image = htmlspecialchars($rent['image_url'] ?? $rent['img_url'] ?? '/assets/placeholder.jpg');
+                                $title = htmlspecialchars($rent['title'] ?? 'Sans titre');
+                                $desc = htmlspecialchars(substr($rent['descreption'] ?? '', 0, 85));
+                                $image = htmlspecialchars($rent['image_url'] ?? '/assets/placeholder.jpg');
                                 $city = htmlspecialchars($rent['city'] ?? 'Ville inconnue');
+                                $capacity = (int)($rent['capacity'] ?? 0);
                                 ?>
-                                <a href="rental_details.php?id=<?= $rentalId ?> class=" card-hover bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-md"
-
-                                    <div class="relative h-56 overflow-hidden">
-                                    <img src="<?= $image ?>"
-                                        alt="<?= $title ?>"
-                                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-
-                                    <!-- Favoris button -->
-                                    <button type="button"
-                                        onclick="event.stopPropagation(); toggleFavorite(<?= $rentalId ?>, '<?= addslashes($title) ?>', '<?= $image ?>', <?= $rent['price_per_night'] ?>);"
-                                        class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-full text-white hover:bg-black/60 transition z-10 favorite-btn"
-                                        data-rental-id="<?= $rentalId ?>">
+                                <div class="card-hover bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-md relative">
+                                    <!-- Favorite Button -->
+                                    <button type="button" onclick="event.stopPropagation(); toggleFavorite(<?= $rentalId ?>, '<?= addslashes($title) ?>', '<?= $image ?>', <?= $rent['price_per_night'] ?>);" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-full text-white hover:bg-black/60 transition z-10 favorite-btn" data-rental-id="<?= $rentalId ?>">
                                         <span class="material-symbols-outlined text-2xl">favorite</span>
                                     </button>
-                                    <!-- Content -->
-                                    <div class="p-5">
-                                        <div class="flex justify-between items-start mb-2">
-                                            <h3 class="font-bold text-lg line-clamp-1"><?= $title ?></h3>
+
+                                    <!-- Image -->
+                                    <a href="rental_details.php?id=<?= $rentalId ?>" class="block">
+                                        <div class="relative h-56 overflow-hidden">
+                                            <img src="<?= $image ?>" alt="<?= $title ?>" class="w-full h-full object-cover transition-transform duration-500 hover:scale-110" onerror="this.src='/assets/placeholder.jpg'">
                                         </div>
 
-                                        <p class="text-slate-500 dark:text-slate-400 text-sm mb-3">
-                                            <?= $city ?> · <?= $rent['capacity'] ?? '?' ?> voyageurs
-                                        </p>
-
-                                        <p class="text-sm text-slate-600 dark:text-slate-300 line-clamp-2 mb-4 min-h-[3rem]">
-                                            <?= $desc ?>
-                                        </p>
-
-                                        <div class="flex justify-between items-center">
-                                            <div>
-                                                <span class="text-2xl font-bold text-primary"><?= $price ?> €</span>
-                                                <span class="text-sm text-slate-500">/ nuit</span>
+                                        <!-- Content -->
+                                        <div class="p-5">
+                                            <div class="flex justify-between items-start mb-2">
+                                                <div class="flex-1">
+                                                    <h3 class="font-bold text-lg line-clamp-1 mb-1"><?= $title ?></h3>
+                                                    <p class="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                                        <span class="material-symbols-outlined text-base">location_on</span>
+                                                        <?= $city ?>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            
+                                            <p class="text-sm text-slate-600 dark:text-slate-300 mb-4 line-clamp-2"><?= $desc ?></p>
+                                            
+                                            <div class="flex items-center gap-2 mb-4 text-sm text-slate-600 dark:text-slate-400">
+                                                <span class="material-symbols-outlined text-base">people</span>
+                                                <span><?= $capacity ?> guests</span>
                                             </div>
 
-                                            <a href="add_reservation.php?rental_id=<?= $rentalId ?>&price=<?= $rent['price_per_night'] ?>"
-                                                class="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition shadow-md">
-                                                Réserver
-                                            </a>
+                                            <div class="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-white/10">
+                                                <div>
+                                                    <span class="text-2xl font-bold text-primary"><?= $price ?> €</span>
+                                                    <span class="text-sm text-slate-500">/ night</span>
+                                                </div>
+                                            </div>
                                         </div>
+                                    </a>
+                                    
+                                    <!-- Book Now Button -->
+                                    <div class="px-5 pb-5">
+                                        <a href="add_reservation.php?rental_id=<?= $rentalId ?>" class="block w-full text-center px-4 py-2.5 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition shadow-md">
+                                            Book Now
+                                        </a>
                                     </div>
-                                </a>
+                                </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
+                    </div>
 
+                    <!-- Pagination -->
+                    <?php if ($totalPages > 1): ?>
+                        <div class="flex justify-center items-center gap-2 mt-8">
+                            <?php if ($page > 1): ?>
+                                <a href="?page=<?= $page - 1 ?><?= !empty($criteria) ? '&' . http_build_query($criteria) : '' ?>" class="px-4 py-2 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-white/10 rounded-lg hover:bg-purple-50 dark:hover:bg-white/5">
+                                    <span class="material-symbols-outlined">chevron_left</span>
+                                </a>
+                            <?php endif; ?>
+
+                            <span class="px-4 py-2 font-semibold">Page <?= $page ?> of <?= $totalPages ?></span>
+
+                            <?php if ($page < $totalPages): ?>
+                                <a href="?page=<?= $page + 1 ?><?= !empty($criteria) ? '&' . http_build_query($criteria) : '' ?>" class="px-4 py-2 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-white/10 rounded-lg hover:bg-purple-50 dark:hover:bg-white/5">
+                                    <span class="material-symbols-outlined">chevron_right</span>
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Favorites Section -->
+            <div id="favoritesSection" class="section">
+                <div class="p-6 max-w-6xl mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">My Favorites</h2>
+                        <button onclick="clearAllFavorites()" class="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 font-semibold">
+                            Clear All
+                        </button>
+                    </div>
+                    <div id="favoritesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <p class="text-slate-500 col-span-full text-center py-12">No favorites yet. Start browsing!</p>
                     </div>
                 </div>
             </div>
+        </main>
     </div>
 
-    <!-- Favorites Section -->
-    <div id="favoritesSection" class="section hidden">
-        <div class="p-6 max-w-6xl mx-auto">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold">My Favorites</h2>
-                <button onclick="clearAllFavorites()" class="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 font-semibold">
-                    Clear All
-                </button>
-            </div>
-            <div id="favoritesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <p class="text-slate-500 col-span-full text-center py-12">No favorites yet. Start browsing!</p>
-            </div>
-        </div>
-    </div>
+    <script>
+        // Mobile menu toggle
+        document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('hidden');
+        });
 
-    <!-- Bookings Section -->
-    <div id="bookingsSection" class="section hidden">
-        <div class="p-6 max-w-6xl mx-auto">
-            <h2 class="text-2xl font-bold mb-6">My Bookings</h2>
-            <div id="bookingsList" class="space-y-4">
-                <p class="text-slate-500 text-center py-12">No bookings yet.</p>
-            </div>
-        </div>
-    </div>
+        // Section navigation
+        function showSection(sectionName) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            
+            const section = document.getElementById(sectionName + 'Section');
+            if (section) {
+                section.classList.add('active');
+                event.target.closest('.nav-btn')?.classList.add('active');
+            }
 
-    <!-- Reviews Section -->
-    <div id="reviewsSection" class="section hidden">
-        <div class="p-6 max-w-6xl mx-auto">
-            <h2 class="text-2xl font-bold mb-6">My Reviews</h2>
-            <div id="reviewsList" class="space-y-4">
-                <p class="text-slate-500 text-center py-12">No reviews yet.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Notifications Section -->
-    <div id="notificationsSection" class="section hidden">
-        <div class="p-6 max-w-6xl mx-auto">
-            <h2 class="text-2xl font-bold mb-6">Notifications</h2>
-            <div id="notificationsList" class="space-y-3">
-                <!-- Notifications will be rendered here -->
-            </div>
-        </div>
-    </div>
-    </main>
-    </div>
-
-    <!-- Rental Detail Modal -->
-    <div id="detailModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-surface-light dark:bg-surface-dark rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div id="detailContent"></div>
-        </div>
-    </div>
-
-    <!-- Booking Modal -->
-    <div id="bookingModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-surface-light dark:bg-surface-dark rounded-2xl max-w-md w-full p-6">
-            <h3 class="text-xl font-bold mb-4">Book This Rental</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-semibold mb-2">Check-in Date</label>
-                    <input type="date" id="checkinDate" class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold mb-2">Check-out Date</label>
-                    <input type="date" id="checkoutDate" class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold mb-2">Number of Guests</label>
-                    <input type="number" id="bookingGuests" min="1" value="2" class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary">
-                </div>
-                <div class="flex gap-3">
-                    <button onclick="confirmBooking()" class="flex-1 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl transition-colors">
-                        Confirm Booking
-                    </button>
-                    <button onclick="closeBookingModal()" class="px-6 py-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 font-bold rounded-xl transition-colors">
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Review Modal -->
-    <div id="reviewModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-surface-light dark:bg-surface-dark rounded-2xl max-w-md w-full p-6">
-            <h3 class="text-xl font-bold mb-4">Leave a Review</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-semibold mb-2">Rating</label>
-                    <div class="flex gap-2">
-                        <button onclick="setRating(1)" class="rating-btn text-3xl">⭐</button>
-                        <button onclick="setRating(2)" class="rating-btn text-3xl">⭐</button>
-                        <button onclick="setRating(3)" class="rating-btn text-3xl">⭐</button>
-                        <button onclick="setRating(4)" class="rating-btn text-3xl">⭐</button>
-                        <button onclick="setRating(5)" class="rating-btn text-3xl">⭐</button>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold mb-2">Comment</label>
-                    <textarea id="reviewComment" rows="4" class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary resize-none"></textarea>
-                </div>
-                <div class="flex gap-3">
-                    <button onclick="submitReview()" class="flex-1 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl transition-colors">
-                        Submit Review
-                    </button>
-                    <button onclick="closeReviewModal()" class="px-6 py-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 font-bold rounded-xl transition-colors">
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</body>
-<script>
-    // Gestion des favoris (localStorage pour l'instant)
-    function toggleFavorite(rentalId, title, image, price) {
-        let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-        const index = favorites.findIndex(f => f.id === rentalId);
-
-        const btn = document.querySelector(`.favorite-btn[data-rental-id="${rentalId}"] span`);
-
-        if (index === -1) {
-            // Ajouter
-            favorites.push({
-                id: rentalId,
-                title,
-                image,
-                price
-            });
-            btn.classList.add('text-red-500', 'fill');
-            btn.classList.remove('text-white');
-            showToast("Ajouté aux favoris ! ❤️");
-        } else {
-            // Supprimer
-            favorites.splice(index, 1);
-            btn.classList.remove('text-red-500', 'fill');
-            btn.classList.add('text-white');
-            showToast("Retiré des favoris");
+            if (sectionName === 'favorites') {
+                renderFavorites();
+            }
         }
 
-        localStorage.setItem('favorites', JSON.stringify(favorites));
-        updateFavoritesCount();
-    }
+        // Favorites management
+        function toggleFavorite(rentalId, title, image, price) {
+            let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+            const index = favorites.findIndex(f => f.id === rentalId);
+            const btn = document.querySelector(`.favorite-btn[data-rental-id="${rentalId}"] span`);
+            
+            if (index === -1) {
+                favorites.push({ id: rentalId, title, image, price });
+                btn.classList.add('text-red-500', 'fill');
+                showToast("Added to favorites! ❤️");
+            } else {
+                favorites.splice(index, 1);
+                btn.classList.remove('text-red-500', 'fill');
+                showToast("Removed from favorites");
+            }
+            
+            localStorage.setItem('favorites', JSON.stringify(favorites));
+            updateFavoritesCount();
+        }
 
-    function updateFavoritesCount() {
-        const favs = JSON.parse(localStorage.getItem('favorites') || '[]');
-        document.getElementById('favCount').textContent = favs.length;
-    }
+        function updateFavoritesCount() {
+            const favs = JSON.parse(localStorage.getItem('favorites') || '[]');
+            document.getElementById('favCount').textContent = favs.length;
+        }
 
-    // Modal détails
-    function showRentalDetails(rentalId) {
-        // Pour l'instant simulation - à remplacer par une vraie requête AJAX/Fetch
-        const modal = document.getElementById('detailModal');
-        const content = document.getElementById('detailContent');
+        function renderFavorites() {
+            const favs = JSON.parse(localStorage.getItem('favorites') || '[]');
+            const grid = document.getElementById('favoritesGrid');
+            
+            if (favs.length === 0) {
+                grid.innerHTML = '<p class="text-slate-500 col-span-full text-center py-12">No favorites yet. Start browsing!</p>';
+                return;
+            }
 
-        // Exemple de contenu (à remplacer par fetch('/api/rental.php?id=' + rentalId))
-        content.innerHTML = `
-            <div class="p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold">Détails du logement</h2>
-                    <button onclick="closeDetailModal()" class="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                        <span class="material-symbols-outlined text-3xl">close</span>
-                    </button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                        <img src="https://via.placeholder.com/600x400" class="rounded-xl w-full object-cover" alt="Rental">
-                    </div>
-                    <div class="space-y-6">
-                        <div>
-                            <h3 class="text-xl font-bold mb-2">Description</h3>
-                            <p class="text-slate-600 dark:text-slate-300">
-                                Magnifique logement lumineux, idéal pour les familles ou groupes d'amis...
-                            </p>
+            grid.innerHTML = favs.map(fav => `
+                <div class="card-hover bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-md">
+                    <a href="rental_details.php?id=${fav.id}">
+                        <img src="${fav.image}" alt="${fav.title}" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <h3 class="font-bold text-lg mb-2">${fav.title}</h3>
+                            <p class="text-primary font-bold">${fav.price} € / night</p>
                         </div>
-                        <div>
-                            <h3 class="text-xl font-bold mb-2">Équipements</h3>
-                            <ul class="grid grid-cols-2 gap-2 text-sm">
-                                <li>✓ Wifi</li>
-                                <li>✓ Cuisine équipée</li>
-                                <li>✓ Parking</li>
-                                <li>✓ Lave-linge</li>
-                            </ul>
-                        </div>
-                        <button onclick="closeDetailModal(); openBookingModal(${rentalId}, 120)" 
-                                class="w-full py-4 bg-primary text-white font-bold rounded-xl text-lg hover:bg-primary-dark transition">
-                            Réserver maintenant
+                    </a>
+                    <div class="px-4 pb-4">
+                        <button onclick="toggleFavorite(${fav.id}, '${fav.title}', '${fav.image}', ${fav.price})" class="w-full py-2 bg-red-500 text-white rounded-xl hover:bg-red-600">
+                            Remove
                         </button>
                     </div>
                 </div>
-            </div>
-        `;
+            `).join('');
+        }
 
-        modal.classList.remove('hidden');
-    }
-
-    function closeDetailModal() {
-        document.getElementById('detailModal').classList.add('hidden');
-    }
-
-    // Gestion simple de la modal booking (à compléter avec votre logique)
-    function openBookingModal(rentalId, pricePerNight) {
-        document.getElementById('bookingModal').classList.remove('hidden');
-        // Vous pouvez stocker rentalId et price dans des data-attributes ou variables globales
-        window.currentRental = {
-            id: rentalId,
-            price: pricePerNight
-        };
-    }
-
-    function closeBookingModal() {
-        document.getElementById('bookingModal').classList.add('hidden');
-    }
-
-    function confirmBooking() {
-        alert("Réservation en cours... (à connecter avec votre classe Booking)");
-        closeBookingModal();
-    }
-
-    // Toast simple
-    function showToast(message) {
-        const toast = document.createElement('div');
-        toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-xl z-50 shadow-2xl animate-fade-in-out';
-        toast.textContent = message;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-    }
-
-    // Initialisation
-    document.addEventListener('DOMContentLoaded', () => {
-        updateFavoritesCount();
-
-        // Charger l'état des favoris au démarrage
-        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-        favorites.forEach(fav => {
-            const btn = document.querySelector(`.favorite-btn[data-rental-id="${fav.id}"] span`);
-            if (btn) {
-                btn.classList.add('text-red-500', 'fill');
-                btn.classList.remove('text-white');
+        function clearAllFavorites() {
+            if (confirm('Remove all favorites?')) {
+                localStorage.setItem('favorites', '[]');
+                updateFavoritesCount();
+                renderFavorites();
+                showToast('All favorites cleared');
             }
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-xl z-50 shadow-2xl';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateFavoritesCount();
+            const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+            favorites.forEach(fav => {
+                const btn = document.querySelector(`.favorite-btn[data-rental-id="${fav.id}"] span`);
+                if (btn) {
+                    btn.classList.add('text-red-500', 'fill');
+                }
+            });
         });
-    });
-</script>
-
-<style>
-    .animate-fade-in-out {
-        animation: fadeInOut 3s forwards;
-    }
-
-    @keyframes fadeInOut {
-        0% {
-            opacity: 0;
-            transform: translate(-50%, 20px);
-        }
-
-        10% {
-            opacity: 1;
-            transform: translate(-50%, 0);
-        }
-
-        90% {
-            opacity: 1;
-            transform: translate(-50%, 0);
-        }
-
-        100% {
-            opacity: 0;
-            transform: translate(-50%, 20px);
-        }
-    }
-</style>
-
+    </script>
+</body>
 </html>
