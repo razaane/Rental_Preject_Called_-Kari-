@@ -1,8 +1,7 @@
 <?php
 require_once __DIR__ . "/../../src/rental.php";
-require_once __DIR__ . "/../../src/Booking.php";
-require_once __DIR__ . "/../../src/User.php";
-
+require_once __DIR__ . "/../../src/booking.php";
+require_once __DIR__ . "/../../src/user.php";
 $db = new Database();
 $conn = $db->getConnection();
 $userObj = new User($conn);

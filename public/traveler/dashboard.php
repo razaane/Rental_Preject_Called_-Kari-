@@ -2,12 +2,15 @@
 require_once __DIR__ . '/../../src/booking.php';
 require_once __DIR__ . '/../../src/rental.php';
 require_once __DIR__ . '/../../src/user.php';
-
+require_once __DIR__ . '/../../src/favorite.php';
 
 $db = new Database();
 $conn = $db->getConnection();
 $ren = new Rental($conn);
 $userObj = new User($conn);
+
+$fav = new Favorite($conn);
+$isFavorite = $fav->isFavorite($_SESSION['user_id'], $rental['rental_id']);
 
 // Get user profile
 $userProfile = $userObj->findByEmail($_SESSION['email'] ?? '');
@@ -48,6 +51,7 @@ try {
 ?>
 <!DOCTYPE html>
 <html class="light" lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -76,16 +80,43 @@ try {
         }
     </script>
     <style>
-        body { min-height: 100vh; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .card-hover { transition: all 0.3s ease; }
-        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 40px -8px rgba(146, 19, 236, 0.25); }
-        .section { display: none; }
-        .section.active { display: block; }
-        .nav-btn.active { background: linear-gradient(135deg, #9213ec 0%, #7a0ec4 100%); color: white; }
+        body {
+            min-height: 100vh;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px -8px rgba(146, 19, 236, 0.25);
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .nav-btn.active {
+            background: linear-gradient(135deg, #9213ec 0%, #7a0ec4 100%);
+            color: white;
+        }
     </style>
 </head>
+
 <body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display">
     <div class="flex min-h-screen">
         <!-- Sidebar -->
@@ -109,7 +140,7 @@ try {
                     <span class="material-symbols-outlined text-xl">dashboard</span>
                     <span>Dashboard</span>
                 </button>
-                
+
                 <a href="bookings.php" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-white/5 transition-all font-semibold text-slate-600 dark:text-slate-300">
                     <span class="material-symbols-outlined text-xl">calendar_month</span>
                     <span>My Bookings</span>
@@ -157,7 +188,7 @@ try {
                 <div class="bg-gradient-to-r from-primary to-pink-500 text-white p-8 rounded-b-3xl shadow-xl">
                     <div class="max-w-6xl mx-auto">
                         <h1 class="text-3xl font-bold mb-4">Find Your Perfect Stay</h1>
-                        
+
                         <!-- Search Form -->
                         <form method="GET" class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -207,6 +238,7 @@ try {
                         <?php else: ?>
                             <?php foreach ($rentals as $rent): ?>
                                 <?php
+                                $isFavorite = $fav->isFavorite($_SESSION['user_id'], $rental['rental_id']);
                                 $rentalId = (int)$rent['rental_id'];
                                 $price = number_format($rent['price_per_night'], 0, ',', ' ');
                                 $title = htmlspecialchars($rent['title'] ?? 'Sans titre');
@@ -216,9 +248,11 @@ try {
                                 $capacity = (int)($rent['capacity'] ?? 0);
                                 ?>
                                 <div class="card-hover bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-md relative">
-                                    <!-- Favorite Button -->
-                                    <button type="button" onclick="event.stopPropagation(); toggleFavorite(<?= $rentalId ?>, '<?= addslashes($title) ?>', '<?= $image ?>', <?= $rent['price_per_night'] ?>);" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-full text-white hover:bg-black/60 transition z-10 favorite-btn" data-rental-id="<?= $rentalId ?>">
-                                        <span class="material-symbols-outlined text-2xl">favorite</span>
+                                    <input type="hidden" name="rental_id" value="<?= $rental['id'] ?>">
+                                    <input type="hidden" name="action" value="<?= $isFavorite ? 'remove' : 'add' ?>">
+
+                                    <button type="submit">
+                                        <?= $isFavorite ? '❤️ Retirer des favoris' : '🤍 Ajouter aux favoris' ?>
                                     </button>
 
                                     <!-- Image -->
@@ -238,9 +272,9 @@ try {
                                                     </p>
                                                 </div>
                                             </div>
-                                            
+
                                             <p class="text-sm text-slate-600 dark:text-slate-300 mb-4 line-clamp-2"><?= $desc ?></p>
-                                            
+
                                             <div class="flex items-center gap-2 mb-4 text-sm text-slate-600 dark:text-slate-400">
                                                 <span class="material-symbols-outlined text-base">people</span>
                                                 <span><?= $capacity ?> guests</span>
@@ -254,7 +288,7 @@ try {
                                             </div>
                                         </div>
                                     </a>
-                                    
+
                                     <!-- Book Now Button -->
                                     <div class="px-5 pb-5">
                                         <a href="add_reservation.php?rental_id=<?= $rentalId ?>" class="block w-full text-center px-4 py-2.5 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition shadow-md">
@@ -314,7 +348,7 @@ try {
         function showSection(sectionName) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            
+
             const section = document.getElementById(sectionName + 'Section');
             if (section) {
                 section.classList.add('active');
@@ -331,9 +365,14 @@ try {
             let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
             const index = favorites.findIndex(f => f.id === rentalId);
             const btn = document.querySelector(`.favorite-btn[data-rental-id="${rentalId}"] span`);
-            
+
             if (index === -1) {
-                favorites.push({ id: rentalId, title, image, price });
+                favorites.push({
+                    id: rentalId,
+                    title,
+                    image,
+                    price
+                });
                 btn.classList.add('text-red-500', 'fill');
                 showToast("Added to favorites! ❤️");
             } else {
@@ -341,7 +380,7 @@ try {
                 btn.classList.remove('text-red-500', 'fill');
                 showToast("Removed from favorites");
             }
-            
+
             localStorage.setItem('favorites', JSON.stringify(favorites));
             updateFavoritesCount();
         }
@@ -354,7 +393,7 @@ try {
         function renderFavorites() {
             const favs = JSON.parse(localStorage.getItem('favorites') || '[]');
             const grid = document.getElementById('favoritesGrid');
-            
+
             if (favs.length === 0) {
                 grid.innerHTML = '<p class="text-slate-500 col-span-full text-center py-12">No favorites yet. Start browsing!</p>';
                 return;
@@ -408,4 +447,5 @@ try {
         });
     </script>
 </body>
+
 </html>

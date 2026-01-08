@@ -50,3 +50,20 @@ CREATE TABLE bookings (
 );
 
 SELECT * FROM rental;
+
+CREATE TABLE favorites (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    rental_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE KEY unique_favorite (user_id, rental_id),
+
+    CONSTRAINT fk_favorites_user
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_favorites_rental
+        FOREIGN KEY (rental_id) REFERENCES rental(rental_id)
+        ON DELETE CASCADE
+);
