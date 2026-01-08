@@ -48,3 +48,5 @@ CREATE TABLE bookings (
     FOREIGN KEY (rental_id) REFERENCES rental(rental_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
+
+SELECT * FROM rental;

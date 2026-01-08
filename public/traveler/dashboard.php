@@ -1,3 +1,16 @@
+<?php
+require_once __DIR__ . "/../../src/rental.php";
+
+$db = new Database;
+$conn = $db->getConnection();
+
+$ren = new Rental($conn);
+$rentals = $ren->findAllPublic();
+
+
+
+?>
+
 <!DOCTYPE html>
 <html class="light" lang="en">
 
@@ -86,11 +99,11 @@
                 </button>
 
                 <!-- Highlighted Reservations / Bookings -->
-                <button onclick="showSection('bookings')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 dark:bg-primary/20 text-primary font-bold shadow-sm hover:bg-primary/20 dark:hover:bg-primary/30 transition-all">
+                <a href="/public/traveler/add_reservation.php" onclick="showSection('bookings')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 dark:bg-primary/20 text-primary font-bold shadow-sm hover:bg-primary/20 dark:hover:bg-primary/30 transition-all">
                     <span class="material-symbols-outlined text-xl fill">calendar_month</span>
-                    <span href="../traveler/add_reservation.php">Reservation Now</span>
+                    <span>Reservation Now</span>
                     <span id="bookingCount" class="ml-auto bg-primary text-white text-xs font-bold px-2.5 py-1 rounded-full">0</span>
-                </button>
+                </a>
 
                 <button onclick="showSection('favorites')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-white/5 transition-all font-semibold text-slate-600 dark:text-slate-300">
                     <span class="material-symbols-outlined text-xl">favorite</span>
@@ -183,56 +196,114 @@
 
                     <div id="rentalsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <!-- Rentals will be rendered here -->
+                        <?php if (empty($rentals)): ?>
+                            <div class="col-span-full text-center py-16 text-slate-500 dark:text-slate-400">
+                                <p class="text-xl">Aucune location disponible pour le moment...</p>
+                            </div>
+                        <?php else: ?>
+                            <?php foreach ($rentals as $rent): ?>
+                                <?php
+                                $rentalId = (int)$rent['rental_id'];
+                                $price = number_format($rent['price_per_night'], 0, ',', ' ');
+                                $title = htmlspecialchars($rent['titre'] ?? $rent['title'] ?? 'Sans titre');
+                                $desc = htmlspecialchars(substr($rent['descreption'] ?? $rent['description'] ?? '', 0, 85)) . '...';
+                                $image = htmlspecialchars($rent['image_url'] ?? $rent['img_url'] ?? '/assets/placeholder.jpg');
+                                $city = htmlspecialchars($rent['city'] ?? 'Ville inconnue');
+                                ?>
+                                <a href="rental_details.php?id=<?= $rentalId ?> class=" card-hover bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-md"
+
+                                    <div class="relative h-56 overflow-hidden">
+                                    <img src="<?= $image ?>"
+                                        alt="<?= $title ?>"
+                                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+
+                                    <!-- Favoris button -->
+                                    <button type="button"
+                                        onclick="event.stopPropagation(); toggleFavorite(<?= $rentalId ?>, '<?= addslashes($title) ?>', '<?= $image ?>', <?= $rent['price_per_night'] ?>);"
+                                        class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-full text-white hover:bg-black/60 transition z-10 favorite-btn"
+                                        data-rental-id="<?= $rentalId ?>">
+                                        <span class="material-symbols-outlined text-2xl">favorite</span>
+                                    </button>
+                                    <!-- Content -->
+                                    <div class="p-5">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <h3 class="font-bold text-lg line-clamp-1"><?= $title ?></h3>
+                                        </div>
+
+                                        <p class="text-slate-500 dark:text-slate-400 text-sm mb-3">
+                                            <?= $city ?> · <?= $rent['capacity'] ?? '?' ?> voyageurs
+                                        </p>
+
+                                        <p class="text-sm text-slate-600 dark:text-slate-300 line-clamp-2 mb-4 min-h-[3rem]">
+                                            <?= $desc ?>
+                                        </p>
+
+                                        <div class="flex justify-between items-center">
+                                            <div>
+                                                <span class="text-2xl font-bold text-primary"><?= $price ?> €</span>
+                                                <span class="text-sm text-slate-500">/ nuit</span>
+                                            </div>
+
+                                            <a href="add_reservation.php?rental_id=<?= $rentalId ?>&price=<?= $rent['price_per_night'] ?>"
+                                                class="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition shadow-md">
+                                                Réserver
+                                            </a>
+                                        </div>
+                                    </div>
+                                </a>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
 
                     </div>
                 </div>
             </div>
+    </div>
 
-            <!-- Favorites Section -->
-            <div id="favoritesSection" class="section hidden">
-                <div class="p-6 max-w-6xl mx-auto">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-bold">My Favorites</h2>
-                        <button onclick="clearAllFavorites()" class="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 font-semibold">
-                            Clear All
-                        </button>
-                    </div>
-                    <div id="favoritesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <p class="text-slate-500 col-span-full text-center py-12">No favorites yet. Start browsing!</p>
-                    </div>
-                </div>
+    <!-- Favorites Section -->
+    <div id="favoritesSection" class="section hidden">
+        <div class="p-6 max-w-6xl mx-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">My Favorites</h2>
+                <button onclick="clearAllFavorites()" class="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 font-semibold">
+                    Clear All
+                </button>
             </div>
+            <div id="favoritesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <p class="text-slate-500 col-span-full text-center py-12">No favorites yet. Start browsing!</p>
+            </div>
+        </div>
+    </div>
 
-            <!-- Bookings Section -->
-            <div id="bookingsSection" class="section hidden">
-                <div class="p-6 max-w-6xl mx-auto">
-                    <h2 class="text-2xl font-bold mb-6">My Bookings</h2>
-                    <div id="bookingsList" class="space-y-4">
-                        <p class="text-slate-500 text-center py-12">No bookings yet.</p>
-                    </div>
-                </div>
+    <!-- Bookings Section -->
+    <div id="bookingsSection" class="section hidden">
+        <div class="p-6 max-w-6xl mx-auto">
+            <h2 class="text-2xl font-bold mb-6">My Bookings</h2>
+            <div id="bookingsList" class="space-y-4">
+                <p class="text-slate-500 text-center py-12">No bookings yet.</p>
             </div>
+        </div>
+    </div>
 
-            <!-- Reviews Section -->
-            <div id="reviewsSection" class="section hidden">
-                <div class="p-6 max-w-6xl mx-auto">
-                    <h2 class="text-2xl font-bold mb-6">My Reviews</h2>
-                    <div id="reviewsList" class="space-y-4">
-                        <p class="text-slate-500 text-center py-12">No reviews yet.</p>
-                    </div>
-                </div>
+    <!-- Reviews Section -->
+    <div id="reviewsSection" class="section hidden">
+        <div class="p-6 max-w-6xl mx-auto">
+            <h2 class="text-2xl font-bold mb-6">My Reviews</h2>
+            <div id="reviewsList" class="space-y-4">
+                <p class="text-slate-500 text-center py-12">No reviews yet.</p>
             </div>
+        </div>
+    </div>
 
-            <!-- Notifications Section -->
-            <div id="notificationsSection" class="section hidden">
-                <div class="p-6 max-w-6xl mx-auto">
-                    <h2 class="text-2xl font-bold mb-6">Notifications</h2>
-                    <div id="notificationsList" class="space-y-3">
-                        <!-- Notifications will be rendered here -->
-                    </div>
-                </div>
+    <!-- Notifications Section -->
+    <div id="notificationsSection" class="section hidden">
+        <div class="p-6 max-w-6xl mx-auto">
+            <h2 class="text-2xl font-bold mb-6">Notifications</h2>
+            <div id="notificationsList" class="space-y-3">
+                <!-- Notifications will be rendered here -->
             </div>
-        </main>
+        </div>
+    </div>
+    </main>
     </div>
 
     <!-- Rental Detail Modal -->
@@ -303,5 +374,163 @@
     </div>
 
 </body>
+<script>
+    // Gestion des favoris (localStorage pour l'instant)
+    function toggleFavorite(rentalId, title, image, price) {
+        let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+        const index = favorites.findIndex(f => f.id === rentalId);
+
+        const btn = document.querySelector(`.favorite-btn[data-rental-id="${rentalId}"] span`);
+
+        if (index === -1) {
+            // Ajouter
+            favorites.push({
+                id: rentalId,
+                title,
+                image,
+                price
+            });
+            btn.classList.add('text-red-500', 'fill');
+            btn.classList.remove('text-white');
+            showToast("Ajouté aux favoris ! ❤️");
+        } else {
+            // Supprimer
+            favorites.splice(index, 1);
+            btn.classList.remove('text-red-500', 'fill');
+            btn.classList.add('text-white');
+            showToast("Retiré des favoris");
+        }
+
+        localStorage.setItem('favorites', JSON.stringify(favorites));
+        updateFavoritesCount();
+    }
+
+    function updateFavoritesCount() {
+        const favs = JSON.parse(localStorage.getItem('favorites') || '[]');
+        document.getElementById('favCount').textContent = favs.length;
+    }
+
+    // Modal détails
+    function showRentalDetails(rentalId) {
+        // Pour l'instant simulation - à remplacer par une vraie requête AJAX/Fetch
+        const modal = document.getElementById('detailModal');
+        const content = document.getElementById('detailContent');
+
+        // Exemple de contenu (à remplacer par fetch('/api/rental.php?id=' + rentalId))
+        content.innerHTML = `
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Détails du logement</h2>
+                    <button onclick="closeDetailModal()" class="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                        <span class="material-symbols-outlined text-3xl">close</span>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <img src="https://via.placeholder.com/600x400" class="rounded-xl w-full object-cover" alt="Rental">
+                    </div>
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-xl font-bold mb-2">Description</h3>
+                            <p class="text-slate-600 dark:text-slate-300">
+                                Magnifique logement lumineux, idéal pour les familles ou groupes d'amis...
+                            </p>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold mb-2">Équipements</h3>
+                            <ul class="grid grid-cols-2 gap-2 text-sm">
+                                <li>✓ Wifi</li>
+                                <li>✓ Cuisine équipée</li>
+                                <li>✓ Parking</li>
+                                <li>✓ Lave-linge</li>
+                            </ul>
+                        </div>
+                        <button onclick="closeDetailModal(); openBookingModal(${rentalId}, 120)" 
+                                class="w-full py-4 bg-primary text-white font-bold rounded-xl text-lg hover:bg-primary-dark transition">
+                            Réserver maintenant
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeDetailModal() {
+        document.getElementById('detailModal').classList.add('hidden');
+    }
+
+    // Gestion simple de la modal booking (à compléter avec votre logique)
+    function openBookingModal(rentalId, pricePerNight) {
+        document.getElementById('bookingModal').classList.remove('hidden');
+        // Vous pouvez stocker rentalId et price dans des data-attributes ou variables globales
+        window.currentRental = {
+            id: rentalId,
+            price: pricePerNight
+        };
+    }
+
+    function closeBookingModal() {
+        document.getElementById('bookingModal').classList.add('hidden');
+    }
+
+    function confirmBooking() {
+        alert("Réservation en cours... (à connecter avec votre classe Booking)");
+        closeBookingModal();
+    }
+
+    // Toast simple
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-xl z-50 shadow-2xl animate-fade-in-out';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', () => {
+        updateFavoritesCount();
+
+        // Charger l'état des favoris au démarrage
+        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+        favorites.forEach(fav => {
+            const btn = document.querySelector(`.favorite-btn[data-rental-id="${fav.id}"] span`);
+            if (btn) {
+                btn.classList.add('text-red-500', 'fill');
+                btn.classList.remove('text-white');
+            }
+        });
+    });
+</script>
+
+<style>
+    .animate-fade-in-out {
+        animation: fadeInOut 3s forwards;
+    }
+
+    @keyframes fadeInOut {
+        0% {
+            opacity: 0;
+            transform: translate(-50%, 20px);
+        }
+
+        10% {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+
+        90% {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+
+        100% {
+            opacity: 0;
+            transform: translate(-50%, 20px);
+        }
+    }
+</style>
 
 </html>

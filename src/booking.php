@@ -46,24 +46,29 @@ class Booking
         $this->total_price = $nights * (float) $data['price_per_night'];
         $this->status = 'confirmed';
 
-       
+
         $sql = "INSERT INTO bookings 
                 (rental_id, user_id, start_date, end_date, total_price, status)
                 VALUES (?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->conn->prepare($sql);
+        $price_per_night= $this->getRentalPrice($this->rental_id);
 
         return $stmt->execute([
             $this->rental_id,
             $this->user_id,
             $this->start_date,
             $this->end_date,
-            $this->total_price,
+            $this->total_price = $this->calculateTotalPrice(
+                $this->start_date,
+                $this->end_date,
+                $price_per_night
+            ),
             $this->status
         ]);
     }
 
-   
+
     public function checkAvailability(
         int $rentalId,
         string $startDate,
@@ -130,5 +135,29 @@ class Booking
         $stmt->execute([$rental_id]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    public function calculateTotalPrice(string $start_date, string $end_date, float $price_per_night): float
+    {
+        $nights = (strtotime($end_date) - strtotime($start_date)) / 86400;
+
+        if ($nights <= 0) {
+            throw new Exception("Invalid booking duration");
+        }
+
+        return $nights * $price_per_night;
+    }
+    public function getRentalPrice(int $rental_id): float
+    {
+        $sql = "SELECT price_per_night FROM rental WHERE rental_id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$rental_id]);
+
+        $price = $stmt->fetchColumn();
+
+        if (!$price) {
+            throw new Exception("Rental not found");
+        }
+
+        return (float) $price;
     }
 }
